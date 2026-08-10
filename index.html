@@ -2093,94 +2093,72 @@
 
     async function loadWeeklyPool() {
 
-      getElement(
-        "entryFeeDisplay"
-      ).textContent =
-        formatCurrency(
-          APP_SETTINGS.entryFee
-        );
+  try {
 
-
-      const {
-        count,
-        error
-      } =
-        await supabaseClient
-
-          .from(
-            APP_SETTINGS
-              .tableName
-          )
-
-          .select(
-            "*",
-            {
-              count: "exact",
-              head: true
-            }
-          )
-
-          .eq(
-            "season",
-            APP_SETTINGS.season
-          )
-
-          .eq(
-            "week_number",
-            APP_SETTINGS.weekNumber
-          );
-
-
-      if (error) {
-
-        console.error(
-          "Unable to load weekly player count:",
-          error
-        );
-
-
-        getElement(
-          "playerCount"
-        ).textContent =
-          "—";
-
-
-        getElement(
-          "weeklyPrizePool"
-        ).textContent =
-          "—";
-
-
-        return;
-
+    const { data, error } = await supabaseClient.rpc(
+      "get_weekly_pool",
+      {
+        p_season: APP_SETTINGS.season,
+        p_week_number: APP_SETTINGS.weekNumber
       }
+    );
 
-
-      const players =
-        count ?? 0;
-
-
-      const weeklyPrizePool =
-        players *
-        APP_SETTINGS.entryFee;
-
-
-      getElement(
-        "playerCount"
-      ).textContent =
-        players
-          .toLocaleString();
-
-
-      getElement(
-        "weeklyPrizePool"
-      ).textContent =
-        formatCurrency(
-          weeklyPrizePool
-        );
-
+    if (error) {
+      throw error;
     }
 
+    const pool = Array.isArray(data)
+      ? data[0]
+      : data;
+
+    const players =
+      Number(pool?.player_count ?? 0);
+
+    const entryFee =
+      Number(pool?.entry_fee ?? 25);
+
+    const prizePool =
+      Number(pool?.prize_pool ?? 0);
+
+
+    getElement("playerCount").textContent =
+      players.toLocaleString();
+
+
+    getElement("entryFeeDisplay").textContent =
+      entryFee.toLocaleString(
+        "en-US",
+        {
+          style: "currency",
+          currency: "USD"
+        }
+      );
+
+
+    getElement("weeklyPrizePool").textContent =
+      prizePool.toLocaleString(
+        "en-US",
+        {
+          style: "currency",
+          currency: "USD"
+        }
+      );
+
+
+  } catch (error) {
+
+    console.error(
+      "Weekly pool error:",
+      error
+    );
+
+    getElement("playerCount").textContent =
+      "—";
+
+    getElement("weeklyPrizePool").textContent =
+      "—";
+  }
+}
 
     /* =====================================================
        APPLY SAVED PICKS
